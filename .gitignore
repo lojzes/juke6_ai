@@ -1,8 +1,0 @@
-*./venv1/
-*.ipynb_checkpoints
-*.idea
-**/chromdb
-**/server_chromadb
-**/*_db
-**/workspace
-**/__**
