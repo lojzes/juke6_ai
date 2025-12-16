@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from llama_index.core import Settings
 from llama_index.llms.dashscope import DashScope,DashScopeGenerationModels
 from llama_index.embeddings.dashscope import DashScopeEmbedding,DashScopeTextEmbeddingModels
@@ -6,14 +8,14 @@ from llama_index.core import  VectorStoreIndex,SimpleDirectoryReader
 
 llm = DashScope(
     model_name=DashScopeGenerationModels.QWEN_MAX,
-    api_key="sk-66bc27a6330f434f8751f8172a73064f"
+    api_key=os.getenv("API_KEY"),
 )
 
 Settings.llm = llm
 
 embedding = DashScopeEmbedding(
     model_name=DashScopeTextEmbeddingModels.TEXT_EMBEDDING_V1,
-    api_key="sk-66bc27a6330f434f8751f8172a73064f"
+    api_key=os.getenv("API_KEY"),
 )
 Settings.embed_model = embedding
 

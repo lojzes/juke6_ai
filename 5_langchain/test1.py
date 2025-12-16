@@ -1,3 +1,6 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
 from langchain.chat_models import init_chat_model
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import(
@@ -6,7 +9,7 @@ PromptTemplate,HumanMessagePromptTemplate
 from pydantic import BaseModel ,Field
 
 llm = init_chat_model('deepseek-chat',model_provider='deepseek',
-        api_key= "sk-fa1e532719fc46aa83166d15619bb76a"
+        api_key= os.getenv("Ali_KEY")
     )
 # print(model)
 # response = model.invoke('你是谁')

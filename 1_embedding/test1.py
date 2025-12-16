@@ -1,9 +1,11 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from openai import OpenAI
 
 # 阿里百炼
 client = OpenAI(
-    api_key='sk-66bc27a6330f434f8751f8172a73064f',
+    api_key=os.getenv("API_KEY"),
     base_url='https://dashscope.aliyuncs.com/compatible-mode/v1'
 )
 

@@ -1,4 +1,6 @@
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import DashScopeEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -21,7 +23,7 @@ texts = text_splitter.create_documents(
 # 灌库
 embeddings = DashScopeEmbeddings(
     model="text-embedding-v1",
-    dashscope_api_key="sk-66bc27a6330f434f8751f8172a73064f"
+    dashscope_api_key=os.getenv("Ali_KEY")
 )
 index = FAISS.from_documents(texts,embeddings)
 # 检索top-5

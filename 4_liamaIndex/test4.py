@@ -1,3 +1,6 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
 from openai.types import Embedding
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams,Distance
@@ -23,14 +26,14 @@ client = QdrantClient(path=PATH)
 
 llm = DashScope(
     model_name=DashScopeGenerationModels.QWEN_MAX,
-    api_key="sk-66bc27a6330f434f8751f8172a73064f"
+    api_key=os.getenv("API_KEY"),
 )
 
 Settings.llm = llm
 
 embedding = DashScopeEmbedding(
     model_name=DashScopeTextEmbeddingModels.TEXT_EMBEDDING_V1,
-    api_key="sk-66bc27a6330f434f8751f8172a73064f"
+    api_key=os.getenv("API_KEY")
 )
 Settings.embed_model = embedding
 

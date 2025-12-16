@@ -1,3 +1,6 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
 import re
 import logging
 import sys
@@ -43,12 +46,12 @@ query_wrapper_prompt = PromptTemplate(
 
 llm = DashScope(
     model_name=DashScopeGenerationModels.QWEN_MAX,
-    api_key="sk-66bc27a6330f434f8751f8172a73064f"
+    api_key=os.getenv("Ali_KEY")
 )
 Settings.llm = llm
 embedding = DashScopeEmbedding(
     model_name=DashScopeTextEmbeddingModels.TEXT_EMBEDDING_V1,
-    api_key="sk-66bc27a6330f434f8751f8172a73064f"
+    api_key=os.getenv("Ali_KEY")
 )
 Settings.embed_model = embedding
 

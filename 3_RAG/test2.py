@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import logging
 import pickle
 from PyPDF2 import PdfReader
@@ -14,14 +16,14 @@ from typing import List, Tuple
 
 # 初始化对话大模型
 chatLLM = ChatOpenAI(
-    api_key="sk-66bc27a6330f434f8751f8172a73064f",
+    api_key=os.getenv("Ali_KEY"),
     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
     model="deepseek-v3"
 )
 
 # 调用阿里百炼平台文本嵌入式模型，配置环境变量
 embeddings = DashScopeEmbeddings(
-    dashscope_api_key="sk-66bc27a6330f434f8751f8172a73064f",
+    dashscope_api_key=os.getenv("Ali_KEY"),
     model="text-embedding-v1",
 )
 load_path = "./vector_db"

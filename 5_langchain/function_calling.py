@@ -1,3 +1,6 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
 from langchain_core.tools import tool
 from langchain_classic.chat_models import init_chat_model
 import json
@@ -29,7 +32,7 @@ from langchain_core.messages import (
     SystemMessage  # 等价于 OpenAI 接口中的 system role
 )
 llm = init_chat_model('deepseek-chat',model_provider='deepseek',
-        api_key= "sk-fa1e532719fc46aa83166d15619bb76a"
+        api_key= os.getenv("Deepseek_KEY")
     )
 
 llm_with_tools = llm.bind_tools([add, multiply])

@@ -64,7 +64,7 @@ def process_text_with_splitter(text: str, page_numbers: List[int], save_path: st
     # embeddings = OpenAIEmbeddings()
     # 调用阿里百炼平台文本嵌入式模型，配置环境变量
     embeddings = DashScopeEmbeddings(
-        dashscope_api_key="sk-66bc27a6330f434f8751f8172a73064f",
+        dashscope_api_key=os.getenv("API_KEY"),
         model="text-embedding-v1",
     )
     # 从文本块创建知识库
@@ -103,7 +103,7 @@ def load_knowledge_base(load_path: str, embeddings=None) -> FAISS:
     # 如果没有提供嵌入式模型,则创建一个新的
     if embeddings is None:
         embeddings = DashScopeEmbeddings(
-            dashscope_api_key="sk-66bc27a6330f434f8751f8172a73064f",
+            dashscope_api_key=os.getenv("API_KEY"),
             model="text-embedding-v1",
         )
 
@@ -147,7 +147,7 @@ if query:
     docs = knowledgeBase.similarity_search(query,k=5)
     # 初始化对话大模型
     chatLLM = ChatOpenAI(
-        api_key="sk-66bc27a6330f434f8751f8172a73064f",
+        api_key=os.getenv("Ali_KEY"),
         base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
         model="deepseek-v3"
     )
