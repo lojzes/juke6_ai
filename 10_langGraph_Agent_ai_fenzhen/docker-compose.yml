@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: root        # 数据库超级用户
+      POSTGRES_PASSWORD: root    # 密码
+      POSTGRES_DB: postgres      # 初始化默认数据库
+      TZ: Asia/Shanghai          # 时区
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data  # 数据持久化
+    restart: always
+    healthcheck:
+      # 关键修改：-U 改为 root（与POSTGRES_USER一致）
+      test: ["CMD", "pg_isready", "-U", "root", "-d", "postgres"]
+      interval: 10s    # 每10秒检查一次
+      timeout: 5s      # 超时时间5秒
+      retries: 5       # 重试5次失败则标记容器不健康
+      start_period: 30s # 容器启动后延迟30秒再开始检查（避免启动未完成就检测）
+    command: ["postgres", "-c", "max_connections=200"] # 自定义最大连接数
+
+volumes:
+  pgdata: # 命名卷，自动创建
