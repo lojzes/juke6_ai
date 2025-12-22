@@ -1,6 +1,6 @@
+
 import asyncio
 import json
-import logging
 import os
 import shutil
 from typing import Dict, List, Optional, Any
@@ -10,15 +10,8 @@ from openai import OpenAI
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-# 配置日志记录
-logging.basicConfig(
-    level=logging.INFO,
-    # 新增 %(filename)s（文件名）、%(funcName)s（函数名）、%(lineno)d（行号）占位符
-    format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s - %(funcName)s - %(lineno)d - %(message)s'
-)
-
-logger = logging.getLogger("client_chat_test")
-
+from sys_log import SysLog
+logger = SysLog.getLogger("client_chat_test")
 
 # 用于管理MCP客户端的配置和环境变量
 class Configuration:

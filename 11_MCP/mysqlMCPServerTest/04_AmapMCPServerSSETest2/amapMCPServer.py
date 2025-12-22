@@ -15,7 +15,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 llm = ChatTongyi(
     model=os.getenv("LLM_Ali_CHAT_MODEL"),
     api_key=os.getenv("Ali_KEY"),
-    temperature=0
+    temperature=0,
 )
 
 
@@ -181,7 +181,8 @@ async def run_agent():
             # input={"messages": [HumanMessage(content="上海的天气如何?")]},
             # input={"messages": [HumanMessage(content="1+1=?")]},
             input={"messages": [
-                HumanMessage(content="先查询有哪些表，然后再查询学生信息表中的数据")
+                # HumanMessage(content="先查询有哪些表，然后再查询学生信息表中的数据") qwen-max
+                HumanMessage(content="查询学生信息表中的数据")  # qwen-plus-latest
             ]},
             config=config,
             stream_mode="messages"

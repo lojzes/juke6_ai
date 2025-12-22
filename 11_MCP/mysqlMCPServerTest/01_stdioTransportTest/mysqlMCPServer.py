@@ -1,6 +1,6 @@
 import asyncio
-import logging
 import os
+from sys_log import SysLog
 from mysql.connector import connect, Error
 from mcp.server.lowlevel import Server
 from mcp.types import Resource, Tool, TextContent
@@ -8,14 +8,7 @@ from mcp.server.stdio import stdio_server
 from pydantic import AnyUrl
 from dotenv import load_dotenv
 
-# 日志相关配置
-logging.basicConfig(
-    level=logging.INFO,
-    # 新增 %(filename)s（文件名）、%(funcName)s（函数名）、%(lineno)d（行号）占位符
-    format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s - %(funcName)s - %(lineno)d - %(message)s'
-)
-logger = logging.getLogger("mysql_mcp_server")
-
+logger = SysLog.getLogger("mysql_mcp_server")
 
 # 获取数据库配置
 def get_db_config():
