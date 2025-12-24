@@ -2,6 +2,17 @@ import asyncio
 import json
 import logging
 import os
+
+import marvin
+from fastmcp.client.sampling import (
+    SamplingMessage,
+    SamplingParams,
+    RequestContext,
+)
+from mcp.client.streamable_http import RequestContext
+from pydantic_ai.models.openai import OpenAIModel, OpenAIChatModel
+from pydantic_ai.providers.deepseek import DeepSeekProvider
+
 from sys_log import SysLog
 from typing import Dict, List, Optional, Any
 import requests
@@ -11,6 +22,7 @@ from openai import OpenAI
 
 # 配置日志记录
 logger = SysLog.getLogger(__name__)
+
 
 # 用于管理MCP客户端的配置和环境变量
 class Configuration:
@@ -114,59 +126,6 @@ class LLMClient:
             return f"I encountered an error: {error_message}. Please try again or rephrase your request."
 
 
-# 代表各个资源及其属性和格式
-class Resource:
-    # 构造函数，在类实例化时调用
-    # uri: 表的唯一资源标识符
-    # name: 资源的名称
-    # mimeType: MIME 类型，表示资源的数据类型
-    # description: 描述信息
-    def __init__(self, uri: str, name: str, description: str, mimeType: str) -> None:
-        self.uri: str = uri
-        self.name: str = name
-        self.description: str = description
-        self.mimeType: str = mimeType
-
-    # 将资源的信息格式化为一个字符串，适合语言模型（LLM）使用
-    def format_for_llm(self) -> str:
-        return f"""
-                URI: {self.uri}
-                Name: {self.name}
-                Description: {self.description}
-                MimeType: {self.mimeType}
-                """
-
-
-# 代表各个工具及其属性和格式
-class Tool:
-    # 构造函数，在类实例化时调用
-    # name: 工具的名称
-    # description: 工具的描述信息
-    # input_schema: 工具的输入架构，通常是一个描述输入参数的字典
-    def __init__(self, name: str, description: str, input_schema: Dict[str, Any]) -> None:
-        self.name: str = name
-        self.description: str = description
-        self.input_schema: Dict[str, Any] = input_schema
-
-    # 将工具的信息格式化为一个字符串，适合语言模型（LLM）使用
-    # 返回值: 包含工具名称、描述和参数信息的格式化字符串
-    def format_for_llm(self) -> str:
-        args_desc = []
-        if 'properties' in self.input_schema:
-            for param_name, param_info in self.input_schema['properties'].items():
-                arg_desc = f"- {param_name}: {param_info.get('description', 'No description')}"
-                if param_name in self.input_schema.get('required', []):
-                    arg_desc += " (required)"
-                args_desc.append(arg_desc)
-
-        return f"""
-                Tool: {self.name}
-                Description: {self.description}
-                Arguments:
-                {chr(10).join(args_desc)}
-                """
-
-
 # 协调用户、 LLM和工具之间的交互
 class ChatSession:
     # servers: 一个 Server 类的列表，表示多个服务器的实例
@@ -180,35 +139,20 @@ class ChatSession:
         try:
             # 尝试将 LLM 响应解析为 JSON ，以便检查是否包含 tool 和 arguments 字段
             llm_call = json.loads(llm_response)
-
-            # 1、如果响应包含工具名称和参数，执行相应工具
-            if "tool" in llm_call and "arguments" in llm_call:
-                logger.info(f"Executing tool: {llm_call['tool']}")
-                logger.info(f"With arguments: {llm_call['arguments']}")
-                # 遍历每个服务器，检查是否有与响应中的工具名称匹配的工具
-                try:
-                    # 执行工具
-                    tool_result = await self.mcp_client.call_tool(llm_call['tool'], llm_call['arguments'])
-                    logger.info(f"Tool execution result: {tool_result.content[0].text}")
-                    return f"Tool execution result: {tool_result.content[0].text}"
-                except Exception as e:
-                    logger.error(f" does not have 'list_tools' method: {e}")
-                return f"No server found with tool: {llm_call['tool']}"
-
             # 2、如果响应包含资源名称和URI，执行读取相应的资源
             if "resource" in llm_call:
-                logger.info(f"Executing resource name: {llm_call['resource']}")
-                logger.info(f"Executing resource description: {llm_call['description']}")
-                logger.info(f"With URI: {llm_call['uri']}")
+                logger.info(f"执行资源名称: {llm_call['resource']}")
+                logger.info(f"执行资源描述: {llm_call['description']}")
+                logger.info(f"资源 URI: {llm_call['uri']}")
                 # 遍历每个服务器，检查是否有与响应中的资源名称匹配的资源
                 try:
                     # 读取资源
-                    result = await self.mcp_client.read_resource(llm_call["uri"])
+                    result = await self.mcp_client.read_resource()
                     # 返回资源的执行结果
-                    logger.info(f"Resource execution result: {result}")
+                    logger.info(f"执行资源结果: {result}")
                     return f"Resource execution result: {result}"
                 except Exception as e:
-                    logger.error(f"Server does not have 'list_resources' method: {e}")
+                    logger.error(f"Server return error  {e}")
                 return f"No server found with resource: {llm_call['uri']}"
             return llm_response
 
@@ -219,43 +163,17 @@ class ChatSession:
     # 方法: start 用于启动整个聊天会话，初始化服务器并开始与用户的互动
     async def start(self) -> None:
         try:
-            # 遍历所有服务器，调用 list_tools() 获取每个服务器的工具列表
-            all_tools = []
-            try:
-                tools = await self.mcp_client.list_tools()
-                all_tools.extend([Tool(tool.name, tool.description, tool.inputSchema) for tool in tools])
-                tools_description = "\n".join([tool.format_for_llm() for tool in all_tools])
-                logger.info(f"tools_description {tools_description}")
-            except Exception as e:
-                print(f"Error while formatting resources for LLM: {e}")
-                tools_description = ""
-
-            # # 遍历所有服务器，调用 list_resources() 获取每个服务器的资源列表
-            all_resources = []
-            resources = await self.mcp_client.list_resources()
-            for resource in resources:
-                all_resources.append(
-                    Resource(resource.uri.unicode_string(), resource.name, resource.description, resource.mimeType))
-
             resource_templates = await self.mcp_client.list_resource_templates()
-            for resource in resource_templates:
-                all_resources.append(Resource(resource.uriTemplate, resource.name, resource.description, resource.mimeType))
+            template_dict = [template.__dict__ for template in resource_templates]
+            resources_description = json.dumps(template_dict, ensure_ascii=False)
 
-            # 将所有资源的描述信息汇总，生成供 LLM 使用的资源描述字符串
-            try:
-                resources_description = "\n".join([resource.format_for_llm() for resource in all_resources])
-                logger.info(f"resources_description {resources_description}")
-            except Exception as e:
-                print(f"Error while formatting resources for LLM: {e}")
-                resources_description = ""
-
+            logger.info(f"resources_description : {resources_description}")
             # 构建一个系统消息，作为 LLM 交互的指令，告知 LLM 使用哪些工具以及如何与用户进行交互
             # 系统消息强调 LLM 必须以严格的 JSON 格式请求工具，并且在工具响应后将其转换为自然语言响应
             system_message = f"""你是一名得力助手，可使用以下资源和工具：
 
                             资源：{resources_description}
-                            工具：{tools_description}
-                            
+
                             根据用户问题选择合适的资源或工具。若无需使用任何资源或工具，直接回复即可。
 
                             重要提示：当需要使用资源时，仅需以以下指定的JSON对象格式响应，不可包含其他内容：
@@ -271,24 +189,8 @@ class ChatSession:
                             3. 聚焦最相关的信息
                             4. 结合用户问题的上下文语境
                             5. 避免直接重复原始数据
-
-                            重要提示：当需要使用工具时，仅需以以下指定的JSON对象格式响应，不可包含其他内容：
-                            {{
-                                "tool": "工具名称",
-                                "description": "工具描述",
-                                "arguments": {{
-                                    "参数名称": "参数值"
-                                }}
-                            }}
-
-                            收到工具的响应后：
-                            1. 将原始数据转化为自然、口语化的回应
-                            2. 回应需简洁但信息完整
-                            3. 聚焦最相关的信息
-                            4. 结合用户问题的上下文语境
-                            5. 避免直接重复原始数据
-
-                            请仅使用上述明确指定的资源或工具。"""
+                            
+                            请仅使用上述明确指定的资源。"""
             # 消息初始化 创建一个消息列表，其中包含一个系统消息，指示 LLM 如何与用户交互
             messages = [
                 {
@@ -307,11 +209,13 @@ class ChatSession:
                         break
 
                     # 将用户输入添加到消息列表
+
                     messages.append({"role": "user", "content": user_input})
+                    logging.info("\n用户: %s", user_input)
 
                     # 调用 LLM 客户端获取 LLM 的响应
                     llm_response = self.llm_client.get_response(messages)
-                    logging.info("\nAssistant: %s", llm_response)
+                    logging.info("\n助手: %s", llm_response)
 
                     # 调用 process_llm_response 方法处理 LLM 响应，执行工具（如果需要）
                     result = await self.process_llm_response(llm_response)
@@ -322,7 +226,7 @@ class ChatSession:
                         messages.append({"role": "system", "content": result})
 
                         final_response = self.llm_client.get_response(messages)
-                        logging.info("\nFinal response: %s", final_response)
+                        logging.info("\n助手: %s", final_response)
                         messages.append({"role": "assistant", "content": final_response})
                     else:
                         messages.append({"role": "assistant", "content": llm_response})
@@ -335,11 +239,40 @@ class ChatSession:
         finally:
             print("\n---------------------")
 
+model = OpenAIChatModel(
+    model_name="deepseek-chat",
+    provider=DeepSeekProvider(api_key=os.getenv("Deepseek_KEY"))
+)
+
+# 创建 Marvin 智能助手
+# 使用 Langgraph 构建 ReAct agent
+
+agent = marvin.Agent(
+    model=model,
+    name="智能助手"
+)
+
+async def sampling_func(
+        messages: List[SamplingMessage],
+        params: SamplingParams,
+        ctx: RequestContext,
+) -> str:
+    """
+    采样函数，用于处理消息并获取 LLM响应
+    :param messages:
+    :param params:
+    :param ctx:
+    :return:
+    """
+    return await marvin.say_async(
+        message=[m.content.text for m in messages],
+        instructions=params.systemPrompt,
+        agent=agent)
 
 async def main() -> None:
     # 创建一个 Configuration 类的实例
     config = Configuration()
-    async with Client("http://127.0.0.1:8000/mcp") as mcp_client:
+    async with Client("http://127.0.0.1:8000/mcp",sampling_handler=sampling_func) as mcp_client:
         # 创建一个 LLMClient 实例，用于与 LLM (大语言模型) 进行交互
         llm_client = LLMClient(config.llm_base_url, config.llm_api_key, config.llm_chat_model)
         chat_session = ChatSession(mcp_client, llm_client)
